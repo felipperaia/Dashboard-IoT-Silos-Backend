@@ -1,0 +1,7 @@
+[build]
+  publish = "vite-react/dist"
+  command = "npm run build"
+
+[dev]
+  command = "npm run dev"
+  port = 3000

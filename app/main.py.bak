@@ -1,0 +1,45 @@
+"""
+main.py
+Entrypoint da aplicação FastAPI; inicializa DB, rotas e APScheduler.
+"""
+from fastapi import FastAPI
+from . import db
+from .routes import auth, users, silos, readings, alerts, notifications
+from .tasks.scheduler import start_scheduler
+
+app = FastAPI(title="Silo Monitor API")
+
+@app.on_event("startup")
+async def startup():
+    db.init_db()
+    start_scheduler(app)  # inicia jobs agendados
+
+# registrar rotas
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(silos.router, prefix="/api/silos", tags=["silos"])
+app.include_router(readings.router, prefix="/api/readings", tags=["readings"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
+app.include_router(ml.router, prefix="/api/ml", tags=["ml"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+
+# Health endpoint simples
+@app.get("/api/health")
+async def health():
+    """
+    Healthcheck: verifica conexão com banco e retorna status.
+    """
+    try:
+        await db.db.command("ping")
+        return {"status": "ok", "db": "reachable"}
+    except Exception as e:
+        return {"status": "error", "db": "unreachable", "detail": str(e)}
+    
+    # importar ml separadamente para evitar import circular durante carga dos routers
+# se o import falhar por algum motivo, a aplicação continua — o log registra o problema.
+try:
+    from . import ml  # importa o package app.ml
+except Exception as e:
+    import logging
+    logging.getLogger("uvicorn.error").warning("Não foi possível importar app.ml: %s", e)
+
