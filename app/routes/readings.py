@@ -1,9 +1,10 @@
 """
 routes/readings.py
-Endpoint para inserir leituras manualmente (e usado pelo job).
+Endpoints para inserir e listar leituras.
 Após inserção chama pipeline de regras e ML.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Optional
 from ..schemas import ReadingIn
 from .. import db, auth
 from datetime import datetime
@@ -15,6 +16,27 @@ import logging
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 
+@router.get("/", response_model=List[dict])
+async def list_readings(
+    silo_id: Optional[str] = Query(None, description="Filtrar por ID do silo"),
+    limit: int = Query(100, description="Número máximo de leituras a retornar"),
+    user=Depends(auth.get_current_user)
+):
+    """
+    Lista leituras com filtros opcionais por silo_id.
+    """
+    query = {}
+    if silo_id:
+        query["silo_id"] = silo_id
+    
+    cursor = db.db.readings.find(query).sort("timestamp", -1).limit(limit)
+    readings = []
+    async for reading in cursor:
+        # Converter ObjectId para string
+        reading["_id"] = str(reading["_id"])
+        readings.append(reading)
+    
+    return readings
 
 @router.post("/", response_model=dict)
 async def create_reading(body: ReadingIn, user=Depends(auth.get_current_user)):
