@@ -3,6 +3,15 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+tests/
+docker-compose.override.yml
+Makefile
+run_dev.ps1
+run_dev.sh
+scripts/
+test_auth.py
+test_health.py
+
 # C extensions
 *.so
 
