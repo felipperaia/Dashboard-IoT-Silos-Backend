@@ -9,8 +9,8 @@ Makefile
 run_dev.ps1
 run_dev.sh
 scripts/
-test_auth.py
-test_health.py
+export/
+docs/
 
 # C extensions
 *.so
