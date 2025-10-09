@@ -19,6 +19,7 @@ logger = logging.getLogger("uvicorn.error")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "dashboardsilo.netlify.app",
         "https://68e7fb5791a50200082f804f--dashboardsilo.netlify.app/login",
         "https://68e7fb5791a50200082f804f--dashboardsilo.netlify.app",
         "https://plataforma-silos-senac.vercel.app/",
