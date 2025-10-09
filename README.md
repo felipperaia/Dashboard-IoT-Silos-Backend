@@ -1,126 +1,131 @@
-# Backend — Silo Monitor (FastAPI)
+# Silo Monitor Backend
 
-Este diretório é o núcleo do serviço backend e deve ser o conteúdo do repositório "silo-monitor-backend".
+Sistema backend moderno para monitoramento inteligente de silos de soja, utilizando FastAPI, MongoDB, notificações push e automação de tarefas agendadas.
 
-Arquivos/dirs que pertencem ao repositório backend
-- app/ (código FastAPI):
-  - app/main.py
-  - app/config.py
-  - app/db.py
-  - app/routes/
-  - app/services/
-  - app/ml/
-  - app/tasks/
-  - app/models/ e app/schemas.py
-- requirements.txt
-- scripts/
-  - seed_admin.py
-  - generate_vapid.py
-- .env.example (template)
-- Dockerfile (opcional)
-- docker-compose.yml (opcional para dev)
-- tests/ (pytest)
-- Makefile (opcional)
-- README.md (este arquivo)
-- .gitignore (ver abaixo)
+ <!-- Substitua pelo seu próprio GIF de demo assim que possível -->
 
-Quickstart local (Windows)
-1. Clone o repositório backend:
-   git clone <url-do-repo-backend>
-   cd silo-monitor-backend
+***
 
-2. Crie e ative virtualenv:
-   python -m venv .venv .\.venv\Scripts\Activate.ps1
+## 🚀 Tecnologias Utilizadas
 
-3. Copie o template de variáveis:
-   copy .env.example .env
-   # edite backend/.env com suas credenciais (MONGO_URI, JWT_SECRET, INIT_ADMIN_SECRET, VAPID keys, etc)
+| Tecnologia        | Função                                    |
+|-------------------|--------------------------------------------|
+| FastAPI           | API REST principal [1]  |
+| Uvicorn           | Servidor ASGI rápido [1] |
+| MongoDB + Motor   | Persistência NoSQL, driver async [1] |
+| Pydantic          | Validação e serialização de dados [1] |
+| APScheduler       | Tarefas agendadas (coleta, atualização) [1] |
+| JWT/PyJWT         | Autenticação segura via token [1] |
+| python-dotenv     | Gerenciamento de variáveis ambiente [1] |
+| Docker Compose    | Integração e deploy local/dev[2]    |
+| Pytest            | Testes automatizados[1]             |
 
-4. Atualize instaladores e instale dependências:
-   python -m pip install --upgrade pip setuptools wheel
+***
+
+## 📦 Estrutura do Projeto
+
+- **app/**: Módulos FastAPI, rotas e serviços principais
+- **app/main.py**: Entrypoint da API
+- **app/config.py**: Configurações globais
+- **app/db.py**: Integração com banco MongoDB
+- **app/routes/**: Endpoints organizados
+- **app/services/**: Lógica do domínio/silo/Notificações
+- **app/tasks/**: Jobs agendados (ex: ingestão periódica)
+- **app/models/** e **app/schemas.py**: Esquemas de dados (ORM/Pydantic)
+- **requirements.txt**: Dependências Python
+- **.env.example**: Template das variáveis ambiente
+- **Dockerfile**, **docker-compose.yml**: Facilita deploy/dev local
+- **scripts/**: Utilitários de inicialização/admin
+- **tests/**: Testes automatizados com Pytest[2]
+
+***
+
+## ⚡️ Como Rodar Localmente
+
+1. **Clone o repositório**
+   ```sh
+   git clone <nosso repositorio>
+   cd <repositorio>
+   ```
+
+2. **Configure o ambiente Python**
+   ```sh
+   python -m venv .venv
+   source .venv/bin/activate        # (Linux/Mac)
+   .\.venv\Scripts\Activate.ps1     # (Windows)
+   ```
+
+3. **Configuração de variáveis**
+   ```sh
+   cp .env.example .env
+   `
+   # Edite .env com seus dados (MONGODB_URI, JWT_SECRET, VAPID_PUBLIC_KEY etc.)
+   ```
+
+4. **Instale as dependências**
+   ```sh
+   python -m pip install --upgrade pip wheel setuptools
    pip install -r requirements.txt
+   ```
 
-5. Inicie em desenvolvimento:
+5. **Inicialize banco/admin**
+   ```sh
+   python scripts/seed_admin.py --username admin --email minh@empresa.com --password Minhasenha123 --secret <INIT_ADMIN_SECRET>
+   ```
+
+6. **Inicie em desenvolvimento**
+   ```sh
    python -m uvicorn app.main:app --reload --port 8000
+   ```
 
-Gerar VAPID keys (recomendado)
-- No projeto frontend (ou na raiz), execute:
+7. **Acesse:**
+   - Endpoint saúde: [http://localhost:8000/api/health](http://localhost:8000/api/health)
+   - Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+***
+
+## 🔥 Principais Endpoints
+
+| Método | Rota                  | Descrição                       |
+|--------|-----------------------|---------------------------------|
+| GET    | /api/health           | Status do backend/MongoDB[2] |
+| GET    | /docs                 | Documentação interativa[2] |
+| POST   | /api/silo             | Registrar novo silo             |
+| GET    | /api/silo/{id}        | Consultar dados de silo         |
+| POST   | /api/notify           | Notificações push/web           |
+
+***
+
+## 🛠 Comandos Úteis
+
+- Gerar chaves VAPID para push:
+  ```sh
   npx web-push generate-vapid-keys --json
-  copie publicKey -> VAPID_PUBLIC_KEY e privateKey -> VAPID_PRIVATE_KEY em backend/.env
+  ```
 
-Seed do admin
-- scripts/seed_admin.py usa INIT_ADMIN_SECRET para criar o primeiro admin:
-  INIT_ADMIN_SECRET=<secret> python scripts/seed_admin.py --username admin --email a@b.com --password "Pass123" --secret <secret>
+- Testes automatizados:
+  ```sh
+  pytest
+  ```
 
-Docker / docker-compose (dev)
-- O repositório inclui docker-compose.yml para facilitar dev local com Mongo.
-- Ajuste MONGO_URI no backend/.env se usando compose (mongodb://mongo:27017/silo).
+- Run na Docker Compose (MongoDB + Backend):
+  ```sh
+  docker-compose up
+  ```
 
-Health / Debug
-- GET /api/health — verifica ping no MongoDB.
-- Logs: execute `python -m uvicorn app.main:app --reload` para ver tracebacks completos.
+***
 
-.gitignore sugerido (crie no repo)
-# Python
-.env
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-.Python
+## 🌱 Dicas para Contribuição
 
-# Editor
-.vscode/
-.idea/
+- Forke o projeto
+- Use branches temáticos para novas features/fixes
+- Mantenha testes automáticos atualizados
+- Dúvidas/críticas: abra uma issue
 
-# Logs
-*.log
+***
 
-Segurança
-- Nunca comite backend/.env
-- Use secret manager do provedor (Render secrets) para variáveis de produção
-- Permissões mínimas para o usuário MongoDB Atlas
+## 🚨 Segurança
 
-Migrando do monorepo
-- Copie os arquivos listados na seção "Arquivos/dirs que pertencem ao repositório backend" para o novo repo e preserve histórico com git-filter-repo se desejar.
-
-Recriar ambiente e instalar dependências (após atualização de requirements)
--------------------------------------------------------------------------------------------------------------------------------------------
-1. Remova o virtualenv atual (se quiser começar limpo):
-   Remove-Item -Recurse -Force .venv
-
-2. Crie e ative um novo venv (use Python 3.11 recomendado):
-   "C:\caminho\para\Python311\python.exe" -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-
-3. Atualize instaladores e instale requirements:
-   python -m pip install --upgrade pip setuptools wheel
-   pip install -r requirements.txt
-
-   Observação: fizemos pin do pymongo para evitar incompatibilidade com motor.
-   Se tiver problemas, remova .venv e repita os passos acima.
-
-4. Inicie o servidor:
-   python -m uvicorn app.main:app --reload --port 8000
-
-Verificação rápida
-- Health: http://localhost:8000/api/health
-- Docs:   http://localhost:8000/docs
-
-Se após reinstalar voltar outro erro, cole as últimas ~50 linhas do log aqui e eu analiso.
-
-Recomendação sobre virtualenv
-- É recomendado criar o venv DENTRO da pasta backend para evitar ambiguidade:
-  cd backend
-  python -m venv .venv
-  .\.venv\Scripts\Activate.ps1
-
-- Caso o .venv esteja na raiz do projeto, o script run_dev.ps1 agora detecta e tenta ativá-lo,
-  mas o local preferencial é backend/.venv.
-
-- Se mudou de Python (ex.: para 3.11), recrie o venv:
-  Remove-Item -Recurse -Force .venv
-  "C:\Path\To\Python311\python.exe" -m venv .venv
-  .\.venv\Scripts\Activate.ps1
-  python -m pip install --upgrade pip setuptools wheel
-  pip install -r requirements.txt
+- Nunca submeta `.env` ao git!
+- Use variáveis secretas para produção (Render, AWS Secrets)
+- Permissões mínimas para usuários MongoDB[2]
