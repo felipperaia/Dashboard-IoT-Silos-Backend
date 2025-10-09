@@ -19,6 +19,7 @@ logger = logging.getLogger("uvicorn.error")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://plataforma-silos-senac.vercel.app/",
         "https://plataforma-silos-senac.vercel.app/login",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
