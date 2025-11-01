@@ -53,31 +53,53 @@ async def fetch_and_store(channel_id: int, read_key: str, silo_id: str = None, d
         await db.db.readings.insert_one(doc)
         logger.info(f"Dados inseridos no MongoDB: {doc['_id']}")
         
-        # Pós-processamento: regras + ML + notificações
+        # Pós-processamento: regras + ML (opcional) + notificações
         try:
             from ..utils import apply_threshold_rules
-            from ..ml.model import detect_anomaly
             from ..services.notification import notify_alert
-            
-            alerts = await apply_threshold_rules(doc)
-            is_anom, score = await detect_anomaly(doc)
-            
-            if is_anom:
-                alerts.append({"level": "warning", "message": "Anomalia detectada (ML)", "value": score})
-                
+
+            # import ML optionalmente
+            detect_anomaly = None
+            try:
+                from ..ml.model import detect_anomaly as _detect_anomaly
+                detect_anomaly = _detect_anomaly
+            except ImportError:
+                # ML não está presente no ambiente — isso é esperado em alguns deployments
+                logger.info("ML module not found, skipping anomaly detection")
+
+            alerts = []
+            try:
+                alerts = await apply_threshold_rules(doc)
+            except Exception as e:
+                logger.error(f"Erro ao aplicar regras de threshold: {e}")
+
+            if detect_anomaly is not None:
+                try:
+                    is_anom, score = await detect_anomaly(doc)
+                    if is_anom:
+                        alerts.append({"level": "warning", "message": "Anomalia detectada (ML)", "value": score})
+                except Exception as e:
+                    logger.error(f"Erro na detecção de anomalias (ML): {e}")
+
             for a in alerts:
-                a_doc = {
-                    "_id": str(uuid.uuid4()),
-                    "silo_id": doc.get("silo_id"),
-                    "level": a.get("level", "critical"),
-                    "message": a.get("message"),
-                    "value": a.get("value"),
-                    "timestamp": datetime.utcnow(),
-                    "acknowledged": False,
-                }
-                await db.db.alerts.insert_one(a_doc)
-                await notify_alert(a_doc)
-                
+                try:
+                    a_doc = {
+                        "_id": str(uuid.uuid4()),
+                        "silo_id": doc.get("silo_id"),
+                        "level": a.get("level", "critical"),
+                        "message": a.get("message"),
+                        "value": a.get("value"),
+                        "timestamp": datetime.utcnow(),
+                        "acknowledged": False,
+                    }
+                    await db.db.alerts.insert_one(a_doc)
+                    await notify_alert(a_doc)
+                except Exception as e:
+                    logger.error(f"Erro ao gravar/enviar alert: {e}")
+
+        except ImportError as e:
+            # módulos essenciais do pós-processamento ausentes — registrar como info
+            logger.info(f"Pós-processamento parcialmente desativado: {e}")
         except Exception as e:
             logger.error(f"Erro no pós-processamento: {e}")
             
