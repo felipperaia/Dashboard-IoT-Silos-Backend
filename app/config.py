@@ -23,3 +23,17 @@ SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = int(os.getenv("SMTP_PORT") or 0)
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASS = os.getenv("SMTP_PASS")
+SMTP_FROM = os.getenv("SMTP_FROM")
+
+# Twilio
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_FROM = os.getenv("TWILIO_FROM")
+
+# OpenRouter (LLM)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1:free")
+LLM_SYSTEM_PROMPT = os.getenv("LLM_SYSTEM_PROMPT", "Você é um assistente especializado no sistema de monitoramento de silos de soja."
+    "Responda apenas sobre o sistema atual, seus dados, funcionalidades e uso, usando a documentação disponível."
+    "Explique o que o usuário pode fazer no dashboard e como interpretar leituras de umidade, temperatura e gases."
+    "Não fale de assuntos fora do sistema que não sejam relevantes para o monitoramento de silos.")

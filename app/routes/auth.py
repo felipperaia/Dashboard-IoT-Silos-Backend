@@ -79,3 +79,19 @@ async def seed_admin(body: UserCreate = Body(...), secret: str = Body(...)):
     }
     await db.db.users.insert_one(user_doc)
     return {"status": "ok"}
+
+
+@router.get("/me")
+async def me(user=Depends(auth.get_current_user)):
+    """Retorna informações básicas do usuário autenticado."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuário não autenticado")
+    return {
+        "_id": user.get("_id"),
+        "id": user.get("_id"),
+        "username": user.get("username"),
+        "name": user.get("name") or user.get("username"),
+        "email": user.get("email"),
+        "role": user.get("role"),
+        "mfa_enabled": user.get("mfa_enabled", False)
+    }

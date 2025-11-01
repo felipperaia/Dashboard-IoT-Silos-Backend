@@ -8,6 +8,8 @@ from . import db
 
 # Importar routers existentes na pasta routes
 from .routes import auth, users, silos, readings, alerts, notifications
+from .routes import chat
+from .routes import mfa
 
 # Importar o poller
 from .services.thingspeak_poller import thingspeak_poller
@@ -48,6 +50,8 @@ app.include_router(silos.router, prefix="/api/silos", tags=["silos"])
 app.include_router(readings.router, prefix="/api/readings", tags=["readings"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(mfa.router, prefix="/api/mfa", tags=["mfa"])
 
 # Tentar registrar router ML de forma condicional:
 try:

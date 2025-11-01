@@ -10,6 +10,8 @@ from .. import config, db, auth
 from datetime import datetime
 import uuid
 from typing import Optional
+from fastapi import Body
+from ..services import notification as notification_service
 
 router = APIRouter()
 
@@ -64,3 +66,22 @@ async def list_subscriptions(admin=Depends(auth.admin_required)):
             # keys omitted intentionally
         })
     return out
+
+
+@router.post("/test")
+async def test_notify(email: Optional[str] = Body(None), phone: Optional[str] = Body(None), telegram_chat_id: Optional[str] = Body(None), user=Depends(auth.get_current_user)):
+    """Endpoint para envio de notificações de teste (admin/operator)."""
+    if user.get("role") not in ("admin", "operator"):
+        raise HTTPException(status_code=403, detail="Admin or operator required")
+    text = f"Teste de notificação {datetime.utcnow().isoformat()}"
+    sent = []
+    if email:
+        await notification_service.send_email(email, "Teste SiloMonitor", text)
+        sent.append("email")
+    if phone:
+        await notification_service.send_sms_twilio(phone, text)
+        sent.append("sms")
+    if telegram_chat_id:
+        await notification_service.send_telegram(telegram_chat_id, text)
+        sent.append("telegram")
+    return {"sent": sent}
