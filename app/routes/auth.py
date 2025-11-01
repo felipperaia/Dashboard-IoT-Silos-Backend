@@ -8,6 +8,7 @@ from ..schemas import LoginIn, Token, UserCreate
 from .. import db, auth, config
 from datetime import datetime, timedelta
 import uuid
+import pyotp
 
 router = APIRouter()
 
@@ -23,6 +24,69 @@ async def login(data: LoginIn):
     await db.db.refresh_tokens.update_one(
         {"user_id": str(user["_id"])},
         {"$set": {"user_id": str(user["_id"]), "token_hash": hashed, "expires_at": expires_at}},
+        upsert=True
+    )
+    return {"access_token": access, "refresh_token": refresh}
+
+
+@router.post("/login-step")
+async def login_step(data: LoginIn):
+    """Login em dois passos: se o usuário tiver MFA habilitado, retorna mfa_required + mfa_token (curta duração).
+    Caso contrário, emite tokens normalmente (compatibilidade)."""
+    user = await db.db.users.find_one({"username": data.username})
+    if not user or not auth.verify_password(data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+
+    if user.get("mfa_enabled", False):
+        # Gera token de desafio para verificação MFA (curta validade)
+        now = datetime.utcnow()
+        payload = {"sub": str(user["_id"]), "purpose": "mfa", "exp": now + timedelta(minutes=5)}
+        mfa_token = auth.jwt.encode(payload, config.JWT_SECRET, algorithm="HS256")
+        return {"mfa_required": True, "mfa_token": mfa_token}
+
+    # Sem MFA, emite tokens (comportamento antigo)
+    access, refresh = auth.create_tokens(str(user["_id"]))
+    hashed = auth.pwd_context.hash(refresh)
+    expires_at = datetime.utcnow() + timedelta(days=config.JWT_REFRESH_EXPIRE_DAYS)
+    await db.db.refresh_tokens.update_one(
+        {"user_id": str(user["_id"])},
+        {"$set": {"user_id": str(user["_id"]), "token_hash": hashed, "expires_at": expires_at}},
+        upsert=True
+    )
+    return {"access_token": access, "refresh_token": refresh}
+
+
+@router.post("/login-verify", response_model=Token)
+async def login_verify(body: dict = Body(...)):
+    """Recebe { mfa_token, code } — valida o mfa_token e o código TOTP, então emite tokens JWT."""
+    mfa_token = body.get("mfa_token")
+    code = body.get("code")
+    if not mfa_token or not code:
+        raise HTTPException(status_code=400, detail="mfa_token e code são obrigatórios")
+
+    try:
+        payload = auth.jwt.decode(mfa_token, config.JWT_SECRET, algorithms=["HS256"])
+        if payload.get("purpose") != "mfa":
+            raise Exception("Token inválido")
+        user_id = payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=401, detail="mfa_token inválido ou expirado")
+
+    user = await db.db.users.find_one({"_id": user_id})
+    if not user or not user.get("mfa_secret"):
+        raise HTTPException(status_code=400, detail="MFA não iniciado para este usuário")
+
+    totp = pyotp.TOTP(user.get("mfa_secret"))
+    if not totp.verify(str(code), valid_window=1):
+        raise HTTPException(status_code=401, detail="Código MFA inválido")
+
+    # Se OK, cria tokens e salva refresh hashed
+    access, refresh = auth.create_tokens(str(user_id))
+    hashed = auth.pwd_context.hash(refresh)
+    expires_at = datetime.utcnow() + timedelta(days=config.JWT_REFRESH_EXPIRE_DAYS)
+    await db.db.refresh_tokens.update_one(
+        {"user_id": str(user_id)},
+        {"$set": {"user_id": str(user_id), "token_hash": hashed, "expires_at": expires_at}},
         upsert=True
     )
     return {"access_token": access, "refresh_token": refresh}

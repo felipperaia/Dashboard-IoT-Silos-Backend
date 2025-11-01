@@ -25,6 +25,12 @@ class UserOut(BaseModel):
     created_at: datetime
     phone: Optional[str] = None
 
+class UserUpdate(BaseModel):
+     """Schema para atualização do perfil do usuário"""
+     name: Optional[str] = None
+     email: Optional[EmailStr] = None
+     phone: Optional[str] = None
+
 class LoginIn(BaseModel):
     username: str
     password: str
