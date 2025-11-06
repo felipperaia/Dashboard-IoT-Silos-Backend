@@ -37,7 +37,7 @@ async def chat(messages: List[ChatMessage], silo_id: Optional[str] = Query(None)
 
     payload = {"model": config.OPENROUTER_MODEL, "messages": messages_out, "temperature": 0.2}
     headers = {"Authorization": f"Bearer {config.OPENROUTER_API_KEY}"}
-    async with httpx.AsyncClient(base_url="https://openrouter.ai/api/v1", timeout=60) as client:
+    async with httpx.AsyncClient(base_url="deepseek/deepseek-chat-v3.1:free", timeout=60) as client:
         r = await client.post("/chat/completions", headers=headers, json=payload)
     if r.status_code >= 300:
         raise HTTPException(status_code=500, detail=f"OpenRouter erro: {r.text}")
