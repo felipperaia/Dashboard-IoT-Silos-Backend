@@ -10,24 +10,24 @@ from . import db
 from .routes import auth, users, silos, readings, alerts, notifications
 from .routes import chat
 from .routes import mfa
+from .routes import rag, weather, reports
 
 # Importar o poller
 from .services.thingspeak_poller import thingspeak_poller
+from .tasks.scheduler import start_scheduler
 
 app = FastAPI()
 logger = logging.getLogger("uvicorn.error")
 
-# ✅ CORREÇÃO CORS - PERMITIR TODAS AS ORIGENS DO FRONTEND
+# CORS: permitir somente origens específicas (Netlify + Render backend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://splendorous-dusk-f86c65.netlify.app",
         "https://dashboardsilo.netlify.app",
-        "https://plataforma-silos-senac.vercel.app",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173"
     ],
+    # also allow subdomains/hosted domains via regex to avoid missing headers on redirects
+    allow_origin_regex=r"https?://(.+\.)?(netlify\.app|onrender\.com)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,6 +43,19 @@ async def startup_event():
     asyncio.create_task(thingspeak_poller())
     logger.info("ThingSpeak poller started")
 
+    # Iniciar scheduler (APScheduler) para jobs periódicos (ex: coleta semanal do tempo)
+    try:
+        start_scheduler(app)
+        logger.info("Scheduler started")
+    except Exception as e:
+        logger.warning(f"Falha ao iniciar scheduler: {e}")
+    
+# Health endpoint para keep-alive / monitoramento
+@app.get('/health')
+async def health():
+    from datetime import datetime
+    return {"status": "ok", "time": datetime.utcnow().isoformat()}
+
 # Registrar routers principais
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
@@ -52,6 +65,9 @@ app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(mfa.router, prefix="/api/mfa", tags=["mfa"])
+app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
+app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 
 # Tentar registrar router ML de forma condicional:
 try:

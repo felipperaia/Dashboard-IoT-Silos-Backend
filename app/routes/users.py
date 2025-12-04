@@ -38,7 +38,7 @@ async def create_user(body: UserCreate, _=Depends(admin_required)):
         "username": body.username,
         "email": body.email,
         "password_hash": auth.hash_password(body.password),
-        "role": body.role,
+        "role": str(body.role),
         "created_at": datetime.utcnow(),
         "phone": body.phone
     }

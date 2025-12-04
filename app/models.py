@@ -47,7 +47,18 @@ class Reading(BaseModel):
     temperature: Optional[float] = None
     humidity: Optional[float] = None
     gas: Optional[float] = None
+    # Luminosity fields
+    luminosity_alert: Optional[int] = None  # 1 = alerta (ex: possível fogo / brilho inesperado)
+    lux: Optional[float] = None
     raw: Dict[str, Any] = {}
+
+
+class SiloEvent(BaseModel):
+    """Eventos relacionados ao silo (ex: abertura, fechamento, incêndio detectado)."""
+    silo_id: str
+    event_type: str
+    payload: Dict[str, Any] = {}
+    timestamp: datetime = Field(default_factory=lambda: datetime.utcnow())
 
 
 class Alert(BaseModel):

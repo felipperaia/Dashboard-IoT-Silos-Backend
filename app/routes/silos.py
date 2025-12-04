@@ -43,11 +43,16 @@ async def create_silo(body: SiloCreate, user=Depends(auth.get_current_user)):
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin required")
     
+    # suportar latitude/longitude opcionais
+    location = {}
+    if getattr(body, 'latitude', None) is not None and getattr(body, 'longitude', None) is not None:
+        location = {"lat": body.latitude, "lon": body.longitude}
+
     doc = {
         "_id": str(uuid.uuid4()),
         "name": body.name,
         "device_id": body.device_id,
-        "location": body.location or {},
+        "location": location,
         "settings": body.settings.dict() if body.settings else {},
         "created_at": datetime.utcnow(),
         "responsible": {}

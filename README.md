@@ -235,3 +235,70 @@ Sistema backend moderno para monitoramento inteligente de silos de grãos via Th
 - O backend expõe endpoints para MFA (TOTP) em `/api/mfa/setup` e `/api/mfa/verify`.
 - Notificações suportadas: WebPush (pywebpush), Telegram (bot), Email (SMTP) e SMS (Twilio). Configure as variáveis correspondentes no `.env`.
 - Para WebPush gere chaves VAPID com `npx web-push generate-vapid-keys --json` e cole no `.env`.
+
+---
+
+**Resumo das alterações aplicadas nesta refatoração (Deméter)**
+
+- Adicionados campos de luminosidade nas leituras (`luminosity_alert` e `lux`), com defaults e parsing no cliente ThingSpeak (`app/services/thing_speak.py`).
+- Configurações novas em `app/config.py`:
+   - `LUMINOSITY_DARK_THRESHOLD` (default: 10 lux)
+   - `LUMINOSITY_OPEN_THRESHOLD` (default: 100 lux)
+   - `IDENTICAL_READINGS_MIN_SECONDS` (default: 18000 = 5 horas)
+- Lógica anti-duplicação: antes de salvar uma leitura, o sistema compara com a última leitura do mesmo `silo_id` e evita gravação se TODOS os campos relevantes forem idênticos e a diferença de tempo for menor que `IDENTICAL_READINGS_MIN_SECONDS`.
+- Registro de eventos de silo (`silo_events`) quando há transição de luminosidade que indica abertura para manutenção (dark -> open).
+- Geração de alertas crítica se `luminosity_alert == 1` (possível fogo) e alerta de aviso quando silo é aberto.
+- Schema atualizado: `app/schemas.py` e `app/models.py` para incluir luminosidade e `SiloEvent`.
+- Rota de criação de silo (`app/routes/silos.py`) aceita agora `latitude` e `longitude` opcionais (em vez de `location` genérico).
+
+**Front-end integrado (resumo do que o front-end passou a suportar)**
+
+- Nova aba `Dashboard Simplificado` com cards por métrica (Temperatura, Umidade, CO₂, Gases, Luminosidade) e ícones SVG.
+- Formulário de criação de silo atualizado para `device_id`, `latitude` e `longitude` (opcionais) e opção de preencher via geolocalização do navegador.
+- Formulário de leitura manual expandido (Temperatura, Umidade, CO₂, MQ2, Lux e Flag de Luminosidade) e restrito à role `admin` no front-end.
+- Chat (Assistente Deméter) persiste histórico no `localStorage` e renderiza Markdown simples (escape HTML para reduzir XSS).
+- Centralização do endpoint do backend via variável de build `VITE_API_URL` (front-end) e fallback para o URL atual.
+- Netlify: `netlify.toml` atualizado com redirect `/* -> /index.html` para suportar routing SPA.
+
+**Mapeamento ThingSpeak usado por padrão**
+- `field1` -> `temp_C` (Temperatura)
+- `field2` -> `rh_pct` (Umidade)
+- `field3` -> `co2_ppm_est` (CO₂ estimado)
+- `field4` -> `mq2_raw` (Sensor MQ2 raw)
+- `field5` -> `luminosity_alert` (flag 0/1) — opcional
+- `field6` -> `lux` (valor em lux) — opcional
+
+Se seu canal ThingSpeak utiliza outro mapeamento, atualize `app/services/thing_speak.py` para mapear os fields corretos.
+
+**Variáveis de ambiente ADICIONAIS importantes (backend)**
+- `LUMINOSITY_DARK_THRESHOLD` (opcional) — valor em lux para considerar silo escuro (default 10)
+- `LUMINOSITY_OPEN_THRESHOLD` (opcional) — valor em lux para considerar silo aberto (default 100)
+- `IDENTICAL_READINGS_MIN_SECONDS` (opcional) — tempo mínimo para gravar leituras idênticas (default 18000)
+
+**Variáveis de ambiente front-end**
+- `VITE_API_URL` — URL completa do backend (ex.: `https://meu-backend.onrender.com/api`). Configure no Netlify (ou no build env do seu host).
+
+---
+
+Status da entrega — itens concluídos e pendentes
+
+Concluído nesta iteração:
+- Suporte a luminosidade + thresholds configuráveis.
+- Lógica anti-duplicação de leituras do ThingSpeak.
+- Registro de eventos de mudança de luminosidade e criação de alertas.
+- Atualizações de schema (leitura/silo) e rotas básicas (`silos.create` adaptado para lat/lon).
+- Front-end: logos, ícones SVG, dashboard simplificado, formulários atualizados, chat persistente, Netlify redirect e centralização do API_URL.
+
+Pendências / recomendações (não implementadas nesta iteração):
+- Endpoints RAG (resumo de dashboards, histórico para contextos da LLM) e orquestrador de contexto para a Assistente Deméter — posso implementar sob demanda.
+- Job semanal para consumir API meteorológica externa, salvar previsões no MongoDB e evitar duplicidade semanal (scheduler + endpoint). Ainda precisa criar `tasks/` + job e rota para disparo manual/cron.
+- Geração de PDF do relatório (back-end) — implementar com `WeasyPrint` ou `reportlab`/`wkhtmltopdf` e integrar à tela de Relatório do front.
+- Ajustes finos na MFA (QRcode / validação) e políticas de gerenciamento por `admin` (no momento o fluxo básico de MFA está presente, mas recomendo validar com testes reais de QR e TOTP).
+- Reorganização dos menus por role (mover `Users` para `Configurações`) e validação raça/role nos endpoints (algumas proteções já existem, mas revisar `routes/users.py` para aceitar enum `admin|operator`).
+
+Se quiser, eu prossigo com qualquer item pendente na ordem de prioridade que você escolher (RAG, Relatório+PDF, MFA, roles). Caso contrário, considere a refatoração aplicada e documentada — você poderá aplicar localmente e validar.
+
+---
+
+Para qualquer dúvida sobre um trecho de código específico que alterei, diga qual arquivo quer revisar que eu descrevo o diff detalhado e rationale de implementação.
+
