@@ -298,7 +298,3 @@ Pendências / recomendações (não implementadas nesta iteração):
 
 Se quiser, eu prossigo com qualquer item pendente na ordem de prioridade que você escolher (RAG, Relatório+PDF, MFA, roles). Caso contrário, considere a refatoração aplicada e documentada — você poderá aplicar localmente e validar.
 
----
-
-Para qualquer dúvida sobre um trecho de código específico que alterei, diga qual arquivo quer revisar que eu descrevo o diff detalhado e rationale de implementação.
-
